@@ -33,7 +33,6 @@
   .header h1 { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.1; }
   .header h1 span { color: #60a5fa; }
   .badge-ano { background: var(--border); color: var(--muted); font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 20px; margin-top: 4px; }
-
   .voice-section {
     background: linear-gradient(135deg, #1a1040, #0f1117);
     border: 1.5px solid #3b1f6e; border-radius: 20px;
@@ -175,11 +174,31 @@
   </div>
   <div class="field" id="campoCategoria">
     <label>Categoria</label>
-    <select id="categoria" onchange="aoMudarCategoria()"><option value="">Selecione...</option></select>
+    <select id="categoria" onchange="aoMudarCategoria()">
+      <option value="">Selecione...</option>
+      <option>Assinaturas</option>
+      <option>Gastos Individuais Jéssica</option>
+      <option>Carlos (Cartão Master)</option>
+      <option>Carlos Cartão NU</option>
+      <option>Carlos (Pensão Alimentícia Bia)</option>
+      <option>Moradia/Aluguel</option>
+      <option>Supermercado</option>
+      <option>Lanches</option>
+      <option>Deslocamentos</option>
+      <option>Restaurantes</option>
+      <option>Investimento</option>
+      <option>Reserva de Emergência</option>
+      <option>Lar</option>
+      <option>Dízimos e Ofertas</option>
+    </select>
   </div>
   <div class="field" id="campoProvedor" style="display:none">
     <label>Provedor</label>
-    <select id="provedor"><option value="">Selecione...</option></select>
+    <select id="provedor">
+      <option value="">Selecione...</option>
+      <option>Carlos</option>
+      <option>Jéssica</option>
+    </select>
   </div>
   <div class="field">
     <label>Descrição</label>
@@ -187,7 +206,12 @@
   </div>
   <div class="field" id="campoResponsavel">
     <label>Responsável</label>
-    <select id="responsavel"><option value="">Selecione...</option></select>
+    <select id="responsavel">
+      <option value="">Selecione...</option>
+      <option>Carlos</option>
+      <option>Jéssica</option>
+      <option>Família</option>
+    </select>
     <div class="resp-hint" id="respHint"></div>
   </div>
 
@@ -222,8 +246,14 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── Configuração ─────────────────────────────────────────
   var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxiG-6en_7xUbAc3KSp9hy1xH0MTz_Wa04Osk0BFtxp6Rtu1vs475tAINCWyHjK-jq5/exec';
+
+  var CATEGORIAS = [
+    'Assinaturas','Gastos Individuais Jéssica','Carlos (Cartão Master)',
+    'Carlos Cartão NU','Carlos (Pensão Alimentícia Bia)','Moradia/Aluguel',
+    'Supermercado','Lanches','Deslocamentos','Restaurantes',
+    'Investimento','Reserva de Emergência','Lar','Dízimos e Ofertas'
+  ];
 
   var RESP_PADRAO = {
     'Assinaturas':                      'Família',
@@ -243,49 +273,41 @@
   };
 
   var tipo = 'gasto';
-  var dadosForm = { categorias: [], provedores: [], responsaveis: [], dataHoje: '' };
   var recognition = null;
   var gravando = false;
   var responsavelEditado = false;
 
   // ── Init ─────────────────────────────────────────────────
   window.addEventListener('load', function() {
-    // Carrega dados do Apps Script via GET
-    fetch(APPS_SCRIPT_URL + '?action=getDados')
-      .then(function(r) { return r.json(); })
-      .then(function(res) {
-        if (!res.ok) throw new Error(res.mensagem);
-        var d = res.dados;
-        dadosForm = d;
-        document.getElementById('data').value = d.dataHoje;
-        var selCat  = document.getElementById('categoria');
-        var selProv = document.getElementById('provedor');
-        var selResp = document.getElementById('responsavel');
-        d.categorias.forEach(function(c)   { selCat.appendChild(new Option(c, c)); });
-        d.provedores.forEach(function(p)   { selProv.appendChild(new Option(p, p)); });
-        d.responsaveis.forEach(function(r) { selResp.appendChild(new Option(r, r)); });
-        iniciarReconhecimento();
-      })
-      .catch(function(e) { showToast('Erro ao carregar: ' + e.message, 'erro'); });
+    // Define data de hoje
+    var hoje = new Date();
+    var ano  = hoje.getFullYear();
+    var mes  = String(hoje.getMonth() + 1).padStart(2, '0');
+    var dia  = String(hoje.getDate()).padStart(2, '0');
+    document.getElementById('data').value = ano + '-' + mes + '-' + dia;
+
+    // Inicia reconhecimento de voz
+    iniciarReconhecimento();
+
+    // Listener responsável
+    document.getElementById('responsavel').addEventListener('change', function() {
+      responsavelEditado = true;
+      this.classList.remove('auto-filled');
+      document.getElementById('respHint').textContent = '';
+    });
   });
 
   // ── Categoria → Responsável automático ──────────────────
   function aoMudarCategoria() {
-    var cat = document.getElementById('categoria').value;
-    if (!cat || responsavelEditado) return;
+    if (responsavelEditado) return;
+    var cat  = document.getElementById('categoria').value;
     var resp = RESP_PADRAO[cat];
     if (resp) {
       document.getElementById('responsavel').value = resp;
-      document.getElementById('responsavel').className = 'auto-filled';
+      document.getElementById('responsavel').classList.add('auto-filled');
       document.getElementById('respHint').textContent = '↑ Preenchido automaticamente';
     }
   }
-
-  document.getElementById('responsavel') && document.getElementById('responsavel').addEventListener('change', function() {
-    responsavelEditado = true;
-    this.className = '';
-    document.getElementById('respHint').textContent = '';
-  });
 
   // ── Reconhecimento de voz ────────────────────────────────
   function iniciarReconhecimento() {
@@ -351,9 +373,9 @@
     var prompt =
       'Você é um assistente financeiro. O usuário falou:\n"' + texto + '"\n\n' +
       'Data de hoje: ' + hoje + '\n' +
-      'Categorias de gasto: ' + dadosForm.categorias.join(', ') + '\n' +
-      'Provedores de receita: ' + dadosForm.provedores.join(', ') + '\n' +
-      'Responsáveis: ' + dadosForm.responsaveis.join(', ') + '\n\n' +
+      'Categorias de gasto disponíveis: ' + CATEGORIAS.join(', ') + '\n' +
+      'Provedores de receita: Carlos, Jéssica\n' +
+      'Responsáveis: Carlos, Jéssica, Família\n\n' +
       'Retorne SOMENTE JSON válido sem markdown:\n' +
       '{"tipo":"gasto ou receita","data":"YYYY-MM-DD","valor":numero,"parcelas":numero,"categoria":"string","provedor":"string","responsavel":"string","descricao":"string","observacao":"string"}';
 
@@ -394,7 +416,7 @@
       var resp = obj.responsavel || RESP_PADRAO[cat] || '';
       if (resp) {
         hlSel('responsavel', resp);
-        document.getElementById('responsavel').className = 'auto-filled';
+        document.getElementById('responsavel').classList.add('auto-filled');
         document.getElementById('respHint').textContent = '↑ Preenchido automaticamente';
         responsavelEditado = false;
       }
@@ -427,7 +449,7 @@
     setTimeout(function() { sel.classList.remove('voice-filled'); }, 2500);
   }
 
-  // ── Formulário ───────────────────────────────────────────
+  // ── Utilitários ──────────────────────────────────────────
   ['valorTotal','parcelas'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', atualizarParcela);
   });
@@ -451,7 +473,9 @@
     document.getElementById('btnSalvar').className = 'btn-salvar ' + (g ? 'btn-gasto' : 'btn-receita');
   }
 
-  // ── Salvar via POST para o Apps Script ───────────────────
+  // ── Salvar via GET (contorna CORS) ───────────────────────
+  // Apps Script não aceita POST de domínios externos
+  // Usamos fetch com no-cors + codificamos os dados na URL via GET
   function salvar() {
     var data  = document.getElementById('data').value;
     var valor = parseFloat(document.getElementById('valorTotal').value);
@@ -462,37 +486,38 @@
     }
     setLoading(true);
 
-    var dados = {
-      data: data,
+    var params = {
+      action:    tipo === 'gasto' ? 'salvarGasto' : 'salvarReceita',
+      data:      data,
       valorTotal: valor,
-      parcelas: parseInt(document.getElementById('parcelas').value) || 1,
+      parcelas:  parseInt(document.getElementById('parcelas').value) || 1,
       descricao: document.getElementById('descricao').value,
     };
-    var action;
+
     if (tipo === 'gasto') {
-      action = 'salvarGasto';
-      dados.categoria   = document.getElementById('categoria').value;
-      dados.responsavel = document.getElementById('responsavel').value;
-      dados.observacao  = document.getElementById('observacao').value;
+      params.categoria   = document.getElementById('categoria').value;
+      params.responsavel = document.getElementById('responsavel').value;
+      params.observacao  = document.getElementById('observacao').value;
     } else {
-      action = 'salvarReceita';
-      dados.provedor = document.getElementById('provedor').value;
+      params.provedor = document.getElementById('provedor').value;
     }
 
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: action, dados: dados })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      setLoading(false);
-      if (res.ok) { showToast('✅ ' + res.mensagem, 'ok'); limparForm(); }
-      else        { showToast('❌ ' + res.mensagem, 'erro'); }
-    })
-    .catch(function(err) {
-      setLoading(false);
-      showToast('❌ Erro: ' + err.message, 'erro');
-    });
+    // Monta query string
+    var qs = Object.keys(params).map(function(k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+
+    // fetch com no-cors — não lemos a resposta mas o Apps Script executa
+    fetch(APPS_SCRIPT_URL + '?' + qs, { method: 'GET', mode: 'no-cors' })
+      .then(function() {
+        setLoading(false);
+        showToast('✅ Lançamento enviado!', 'ok');
+        limparForm();
+      })
+      .catch(function(err) {
+        setLoading(false);
+        showToast('❌ Erro: ' + err.message, 'erro');
+      });
   }
 
   function limparForm() {
@@ -501,7 +526,7 @@
     document.getElementById('categoria').value = '';
     document.getElementById('provedor').value = '';
     document.getElementById('responsavel').value = '';
-    document.getElementById('responsavel').className = '';
+    document.getElementById('responsavel').classList.remove('auto-filled');
     document.getElementById('respHint').textContent = '';
     document.getElementById('transcriptBox').style.display = 'none';
     document.getElementById('valorParcela').textContent = 'R$ 0,00 × 1x';
